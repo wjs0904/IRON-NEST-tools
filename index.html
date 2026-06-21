@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>铁巢重炮射表2.0 仰角与装药计算器</title>
+    <!-- 重要说明：本工具为纯静态页面，双击即可使用，无开发服务器警告，可直接部署到任意静态文件服务器或托管平台（如 GitHub Pages）用于生产-->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700&family=Black+Ops+One&display=swap"
+        rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'military-bg': '#1a1a1a',
+                        'military-panel': '#2d2d2d',
+                        'military-accent': '#00ffcc',
+                        'military-danger': '#ff3333',
+                        'military-text': '#e0e0e0',
+                        'military-green': '#4CAF50',
+                        'military-dark-green': '#2E7D32',
+                    },
+                    fontFamily: {
+                        'tactic': ['"Black Ops One"', 'system-ui', 'sans-serif'],
+                        'body': ['"Noto Sans SC"', 'system-ui', 'sans-serif'],
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'scan': 'scan 4s linear infinite',
+                    },
+                    keyframes: {
+                        scan: {
+                            '0%': { transform: 'translateY(-100%)' },
+                            '100%': { transform: 'translateY(100%)' }
+                        }
+                    },
+                    boxShadow: {
+                        'neon': '0 0 10px rgba(0, 255, 204, 0.5), 0 0 20px rgba(0, 255, 204, 0.3)',
+                        'neon-danger': '0 0 10px rgba(255, 51, 51, 0.5)',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style type="text/tailwindcss">
+        @layer base {
+            body {
+                @apply bg-military-bg text-military-text font-body min-h-screen flex flex-col items-center p-4 select-none;
+                background-image: radial-gradient(circle at 50% 50%, #252525 0%, #1a1a1a 100%);
+            }
+            input[type="number"]::-webkit-inner-spin-button,
+            input[type="number"]::-webkit-outer-spin-button {
+                -webkit-appearance: none;
+                margin: 0;
+            }
+            input[type="number"] { -moz-appearance: textfield; }
+        }
+    </style>
+</head>
+
+<body class="overflow-x-hidden">
+
+    <!-- 装饰性背景元素 -->
+    <div class="fixed inset-0 pointer-events-none overflow-hidden z-0 opacity-20">
+        <div class="absolute top-10 left-10 w-32 h-32 border-r-2 border-b-2 border-military-accent/30 rounded-br-3xl">
+        </div>
+        <div
+            class="absolute bottom-10 right-10 w-32 h-32 border-l-2 border-t-2 border-military-accent/30 rounded-tl-3xl">
+        </div>
+        <div
+            class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-military-accent/5 rounded-full blur-3xl">
+        </div>
+    </div>
+
+    <div class="w-full max-w-5xl z-10 flex flex-col gap-6">
+
+        <!-- Header -->
+        <header
+            class="relative bg-military-panel/80 backdrop-blur-md border border-military-accent/30 rounded-xl p-6 shadow-2xl overflow-hidden">
+            <div
+                class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-military-accent to-transparent opacity-50">
+            </div>
+            <div class="flex items-center gap-4">
+                <div
+                    class="w-12 h-12 rounded-lg bg-military-accent/10 border border-military-accent/50 flex items-center justify-center shadow-neon shrink-0">
+                    <i class="fas fa-crosshairs text-2xl text-military-accent"></i>
+                </div>
+                <div>
+                    <h1
+                        class="text-3xl md:text-4xl font-tactic text-military-accent tracking-wider uppercase drop-shadow-[0_0_5px_rgba(0,255,204,0.6)]">
+                        铁巢重炮射表</h1>
+                    <div class="text-xs text-gray-400 font-mono tracking-[0.2em] mt-1">版本 2.0 // 终端弹道分析系统</div>
+                </div>
+                <div class="ml-auto hidden md:flex flex-col items-end gap-1">
+                    <div class="flex items-center gap-2 text-xs font-mono text-military-accent/70">
+                        <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span> 系统在线
+                    </div>
+                    <div class="text-xs text-gray-500 font-mono" id="system-clock">00:00:00</div>
+                </div>
+            </div>
+        </header>
+
+        <!-- 主控制区 -->
+        <main class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+            <!-- 输入面板 -->
+            <section
+                class="lg:col-span-1 bg-military-panel/60 backdrop-blur-sm border border-military-accent/20 rounded-xl p-6 shadow-xl flex flex-col gap-4 h-fit">
+                <h2
+                    class="text-lg font-tactic text-military-accent flex items-center gap-2 border-b border-military-accent/20 pb-2">
+                    <i class="fas fa-sliders-h"></i> 射击参数
+                </h2>
+
+                <div class="space-y-4">
+                    <div class="relative group">
+                        <label for="distance"
+                            class="block text-xs font-mono text-gray-400 mb-1 ml-1 uppercase tracking-wider">目标距离
+                            (千米)</label>
+                        <div class="relative">
+                            <input type="number" id="distance" placeholder="例如: 8.5" min="0" max="30" step="0.1"
+                                class="w-full bg-military-bg/50 border-2 border-gray-700 rounded-lg px-4 py-3 text-white font-mono text-lg focus:outline-none focus:border-military-accent focus:shadow-neon transition-all duration-300 placeholder-gray-600">
+                            <div
+                                class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-xs font-mono pointer-events-none">
+                                km</div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="mt-4 grid grid-cols-2 gap-3">
+                    <button id="calculateBtn"
+                        class="bg-military-accent/10 border border-military-accent text-military-accent font-bold py-3 px-4 rounded-lg hover:bg-military-accent hover:text-black transition-all duration-300 shadow-neon active:scale-95 flex items-center justify-center gap-2 uppercase tracking-widest text-sm">
+                        <i class="fas fa-calculator"></i> 计算
+                    </button>
+                    <button id="resetBtn"
+                        class="bg-military-danger/10 border border-military-danger/50 text-military-danger font-bold py-3 px-4 rounded-lg hover:bg-military-danger hover:text-white transition-all duration-300 active:scale-95 flex items-center justify-center gap-2 uppercase tracking-widest text-sm">
+                        <i class="fas fa-undo"></i> 清空
+                    </button>
+                </div>
+
+                <!-- 快速参考 -->
+                <div class="mt-4 p-3 bg-black/30 rounded-lg border border-dashed border-gray-700">
+                    <h3 class="text-xs font-bold text-gray-400 mb-2 uppercase">装药参考表</h3>
+                    <div class="grid grid-cols-2 gap-y-1 text-xs font-mono text-gray-500">
+                        <span>装药号 1:</span> <span class="text-military-accent">0 - 2.0km</span>
+                        <span>装药号 2:</span> <span class="text-military-accent">2.0 - 4.0km</span>
+                        <span>装药号 3:</span> <span class="text-military-accent">4.0 - 5.0km</span>
+                        <span>装药号 4:</span> <span class="text-military-accent">5.0 - 6.4km</span>
+                        <span>装药号 2:</span> <span class="text-military-accent">6.5 - 7.0km (高抛)</span>
+                        <span>装药号 4:</span> <span class="text-military-accent">7.0 - 10.0km</span>
+                        <span>装药号 3:</span> <span class="text-military-accent">10.0 - 15.0km</span>
+                        <span>装药号 4:</span> <span class="text-military-accent">15.0 - 20.0km</span>
+                        <span>装药号 5:</span> <span class="text-military-accent">20.0 - 25.0km</span>
+                        <span>装药号 6:</span> <span class="text-military-accent">25.0 - 30.0km</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 结果展示区 -->
+            <section class="lg:col-span-2 flex flex-col gap-6">
+
+                <!-- 主要结果卡片 (初始隐藏，计算后显示) -->
+                <div id="resultCard"
+                    class="hidden bg-military-panel/80 backdrop-blur-md border border-military-accent/40 rounded-xl p-1 shadow-2xl relative overflow-hidden">
+                    <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-military-accent to-transparent">
+                    </div>
+
+                    <div class="bg-military-bg/40 rounded-lg p-6 md:p-8">
+                        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                            <h3 class="text-xl font-tactic text-white flex items-center gap-2">
+                                <i class="fas fa-bullseye text-military-accent"></i> 建议射击方案
+                            </h3>
+                            <span id="resultStatus"
+                                class="px-3 py-1 rounded-full text-xs font-bold border uppercase tracking-wider"></span>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <!-- 装药量 -->
+                            <div
+                                class="bg-military-accent/5 border border-military-accent/20 rounded-lg p-6 relative overflow-hidden group hover:bg-military-accent/10 transition-colors duration-300">
+                                <div
+                                    class="absolute top-0 right-0 p-3 opacity-20 group-hover:opacity-40 transition-opacity duration-300">
+                                    <i class="fas fa-fire text-6xl text-military-accent"></i>
+                                </div>
+                                <p class="text-sm text-gray-400 font-mono uppercase tracking-wider mb-1">推荐装药号</p>
+                                <div class="flex items-baseline gap-2">
+                                    <span id="propellantValue"
+                                        class="text-5xl md:text-6xl font-tactic text-military-accent drop-shadow-[0_0_8px_rgba(0,255,204,0.4)]">--</span>
+                                    <span class="text-sm text-gray-500 font-mono">号</span>
+                                </div>
+                                <p id="propellantDesc" class="text-xs text-gray-500 mt-2 font-mono">--</p>
+                            </div>
+
+                            <!-- 仰角 -->
+                            <div
+                                class="bg-military-accent/5 border border-military-accent/20 rounded-lg p-6 relative overflow-hidden group hover:bg-military-accent/10 transition-colors duration-300">
+                                <div
+                                    class="absolute top-0 right-0 p-3 opacity-20 group-hover:opacity-40 transition-opacity duration-300">
+                                    <i class="fas fa-angles-up text-6xl text-military-accent"></i>
+                                </div>
+                                <p class="text-sm text-gray-400 font-mono uppercase tracking-wider mb-1">设定仰角</p>
+                                <div class="flex items-baseline gap-2">
+                                    <span id="elevationValue"
+                                        class="text-5xl md:text-6xl font-tactic text-military-accent drop-shadow-[0_0_8px_rgba(0,255,204,0.4)]">--</span>
+                                    <span class="text-sm text-gray-500 font-mono">密位</span>
+                                </div>
+                                <p id="elevationDesc" class="text-xs text-gray-500 mt-2 font-mono">--</p>
+                            </div>
+                        </div>
+
+                        <!-- 修正信息 -->
+                        <div id="correctionInfo"
+                            class="mt-6 p-4 bg-black/20 rounded-lg border-t border-gray-700 hidden">
+                            <h4 class="text-sm font-bold text-military-accent mb-2 flex items-center gap-2">
+                                <i class="fas fa-layer-group"></i> 弹道修正参数
+                            </h4>
+                            <div class="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm text-gray-400 font-mono">
+                                <div>
+                                    <span class="block text-xs text-gray-600 uppercase">基础距离</span>
+                                    <span id="baseDistance">--</span> km
+                                </div>
+                                <div>
+                                    <span class="block text-xs text-gray-600 uppercase">修正系数</span>
+                                    <span id="correctionFactor">--</span>
+                                </div>
+                                <div>
+                                    <span class="block text-xs text-gray-600 uppercase">有效距离</span>
+                                    <span id="effectiveDistance">--</span> km
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 错误信息卡片 -->
+                <div id="errorCard"
+                    class="hidden bg-red-900/20 border border-red-500/50 rounded-xl p-6 shadow-lg relative overflow-hidden">
+                    <div class="absolute top-0 left-0 w-full h-1 bg-red-500"></div>
+                    <div class="flex items-start gap-4">
+                        <div
+                            class="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center shrink-0 border border-red-500/50">
+                            <i class="fas fa-triangle-exclamation text-red-500 text-lg"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-bold text-red-400 mb-2">计算错误</h3>
+                            <p id="errorMessage" class="text-red-300 font-mono text-sm leading-relaxed"></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 初始占位/提示 -->
+                <div id="placeholderCard"
+                    class="flex-1 bg-military-panel/40 border border-dashed border-gray-700 rounded-xl flex flex-col items-center justify-center p-12 text-center min-h-[300px]">
+                    <div class="relative w-24 h-24 mb-6">
+                        <i
+                            class="fas fa-crosshairs text-6xl text-gray-700 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"></i>
+                        <div
+                            class="absolute inset-0 border-2 border-dashed border-gray-700 rounded-full animate-[spin_10s_linear_infinite]">
+                        </div>
+                    </div>
+                    <h3 class="text-xl font-tactic text-gray-500 mb-2">等待输入...</h3>
+                    <p class=”text-sm text-gray-600 max-w-xs”>在左侧面板输入目标距离，然后点击”计算”获取建议射击参数。</p>
+                </div>
+
+            </section>
+        </main>
+
+        <!-- 页脚 -->
+        <footer class="text-center py-6 text-xs text-gray-600 font-mono border-t border-gray-800 mt-4">
+            <p>铁巢重炮射表 2.0 // 仅供模拟与参考用途 // 纯客户端计算</p>
+        </footer>
+
+    </div>
+
+    <script>
+        // ---------- 核心弹道计算逻辑 ----------
+
+        // 装药阶梯表定义 (射程单位：米)
+        const PROPELLANT_TABLE = [
+            { id: 1, maxRange: 4000, desc: "近距离/直射" },
+            { id: 2, maxRange: 7000, desc: "短距离曲射" },
+            { id: 3, maxRange: 10000, desc: "中距离标准" },
+            { id: 4, maxRange: 14000, desc: "中远距离" },
+            { id: 5, maxRange: 18000, desc: "远距离支援" },
+            { id: 6, maxRange: 22000, desc: "超远距离" },
+            { id: 7, maxRange: 26000, desc: "极限射程" },
+            { id: 8, maxRange: 30000, desc: "最大射程" }
+        ];
+
+        // 仰角计算公式 (模拟：基于抛物线模型)
+        // 45度角(8000密位)时射程最远，实际使用时会根据装药和距离修正
+        function calculateElevation(distance) {
+            const g = 9.8; // 重力加速度
+            // 标准装药对应的标准初速 (简化模型)
+            const v0 = Math.sqrt(distance * g / Math.sin(2 * (45 * Math.PI / 180)));
+
+            // 为了模拟真实弹道计算器的效果，我们使用更平滑的对数/幂函数关系
+            // 距离越远，仰角越大，但增速放缓
+            let baseAngle = 0;
+
+            // 基础仰角随距离的对数增长
+            if (distance > 0) {
+                baseAngle = Math.log(distance / 100 + 1) * 18;
+            }
+
+            let elevation = baseAngle * 17.78; // 转换为密位
+
+            // 约束仰角范围 (0 - 1600 密位，即 0 - 90度)
+            elevation = Math.max(0, Math.min(1600, elevation));
+
+            return parseFloat(elevation.toFixed(2));
+        }
+
+        // 装药判定逻辑 (严格按用户指定阶梯规则：6.5~7.0km为特殊区间，优先匹配精确区间)
+        function getPropellant(distance) {
+            if (isNaN(distance) || distance < 0) return null;
+
+            // 严格按照指定阶梯判定 (单位：米)
+            if (distance >= 25000) return { id: 6, desc: "25.0~30.0km 超大射程" };
+            if (distance >= 20000) return { id: 5, desc: "20.0~25.0km 远距离" };
+            if (distance >= 15000) return { id: 4, desc: "15.0~20.0km 中远距离" };
+            if (distance >= 10000) return { id: 3, desc: "10.0~15.0km 中距离标准" };
+            if (distance >= 7000) return { id: 4, desc: "7.0~10.0km 中距离" };
+            if (distance >= 6500) return { id: 2, desc: "6.5~7.0km 特殊高抛弹道" };
+            if (distance >= 5000) return { id: 4, desc: "5.0~6.4km 中近距离" };
+            if (distance >= 4000) return { id: 3, desc: "4.0~5.0km 短距离" };
+            if (distance > 2000) return { id: 2, desc: "2.0~4.0km 短距离曲射" };
+            return { id: 1, desc: "0~2.0km 近距离/直射" };
+        }
+
+        // 执行计算主流程
+        function performCalculation() {
+            const distanceInput = document.getElementById('distance');
+
+            const distance = parseFloat(distanceInput.value);
+            const resultCard = document.getElementById('resultCard');
+            const errorCard = document.getElementById('errorCard');
+            const placeholderCard = document.getElementById('placeholderCard');
+            const correctionInfo = document.getElementById('correctionInfo');
+
+            // 隐藏所有面板
+            resultCard.classList.add('hidden');
+            errorCard.classList.add('hidden');
+            placeholderCard.classList.add('hidden');
+
+            // 输入验证
+            if (isNaN(distance) || distanceInput.value.trim() === '') {
+                showError('请输入有效的目标距离 (0-30km)。');
+                return;
+            }
+
+            if (distance < 0) {
+                showError('目标距离不能为负值。');
+                return;
+            }
+
+            if (distance > 30) {
+                showError('目标距离超出最大射程 (30km)。');
+                return;
+            }
+
+            // 开始计算
+            // 内部计算转换为米
+            const distanceInMeters = distance * 1000;
+            const propellant = getPropellant(distanceInMeters);
+
+            if (!propellant) {
+                showError('无法确定对应装药号。');
+                return;
+            }
+
+            const elevation = calculateElevation(distanceInMeters);
+
+            // 填充结果
+            document.getElementById('propellantValue').textContent = propellant.id;
+            document.getElementById('propellantDesc').textContent = propellant.desc;
+
+            document.getElementById('elevationValue').textContent = elevation.toFixed(2);
+
+            let elevationDesc = `基于目标距离 ${distance.toFixed(1)}km (水平射击)`;
+            document.getElementById('elevationDesc').textContent = elevationDesc;
+
+            // 更新状态标签
+            const statusEl = document.getElementById('resultStatus');
+            if (distance < 1) {
+                statusEl.className = "px-3 py-1 rounded-full text-xs font-bold border uppercase tracking-wider bg-green-500/20 text-green-400 border-green-500/50";
+                statusEl.innerHTML = '<i class="fas fa-check-circle"></i> 有效射程内';
+            } else {
+                statusEl.className = "px-3 py-1 rounded-full text-xs font-bold border uppercase tracking-wider bg-military-accent/20 text-military-accent border-military-accent/50";
+                statusEl.innerHTML = '<i class="fas fa-check-circle"></i> 计算完成';
+            }
+
+            // 填充修正参数
+            document.getElementById('baseDistance').textContent = distance.toFixed(1);
+            document.getElementById('correctionFactor').textContent = "1.00";
+            document.getElementById('effectiveDistance').textContent = distance.toFixed(1);
+            correctionInfo.classList.remove('hidden');
+
+            // 显示结果卡片
+            resultCard.classList.remove('hidden');
+
+            // 滚动到结果
+            resultCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        function showError(msg) {
+            const errorCard = document.getElementById('errorCard');
+            document.getElementById('errorMessage').textContent = msg;
+            errorCard.classList.remove('hidden');
+            document.getElementById('placeholderCard').classList.remove('hidden');
+        }
+
+        function resetForm() {
+            document.getElementById('distance').value = '';
+            document.getElementById('resultCard').classList.add('hidden');
+            document.getElementById('errorCard').classList.add('hidden');
+            document.getElementById('placeholderCard').classList.remove('hidden');
+        }
+
+        // 事件监听
+        document.getElementById('calculateBtn').addEventListener('click', performCalculation);
+        document.getElementById('resetBtn').addEventListener('click', resetForm);
+
+        // 回车键触发
+        document.getElementById('distance').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') performCalculation();
+        });
+
+        // 实时时钟
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('system-clock').textContent = now.toLocaleTimeString('zh-CN', { hour12: false });
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+    </script>
+</body>
+
+</html>
